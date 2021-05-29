@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+    #version 300 es
+
+    in vec4 aPosition;
+    in vec2 aTexCoord;
+    in vec3 aNormal;
+
+    out vec3 N;
+    out vec3 L;
+    out vec3 E;
+    out vec2 vTexCoord;
+
+    uniform mat4 uModelViewMatrix;
+    uniform mat4 uProjectionMatrix;
+    uniform vec4 uLightPosition;
+    uniform mat3 uNormalMatrix;
+    uniform bool uBack;
+    uniform float wF;
+    uniform float hF;
+
+    void main()
+    {
+        // Different behaviour for background
+        if (uBack){
+            // Directional light that moves with the camera      
+            vec3 pos = -(uModelViewMatrix * aPosition).xyz;
+
+            L = normalize(uLightPosition).xyz;
+            E = normalize(-pos);
+            N = normalize(uNormalMatrix * aNormal.xyz);
+
+            // Vertices position computation
+            gl_Position = uProjectionMatrix * uModelViewMatrix * aPosition;
+            vTexCoord = aTexCoord;
+        }
+        else{
+            // Background doesn't use uModelViewMatrix, uProjectionMatrix or lights, only texture with adapatation based on the window size
+            gl_Position = aPosition;
+            vTexCoord = vec2(aTexCoord[0] * wF, aTexCoord[1] * hF);
+        }
+        
+    }
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+    #version 300 es
+
+    precision mediump float;
+
+    in vec3 N;
+    in vec3 L;
+    in vec3 E;
+    in vec2 vTexCoord;
+
+    out vec4 fColor;
+    
+    uniform sampler2D uTexMap;
+    uniform vec4 uAmbientProduct;
+    uniform vec4 uDiffuseProduct;
+    uniform vec4 uSpecularProduct;
+    uniform float uShininess;
+    uniform bool uBack;
+
+    void main()
+    {
+        // Use texture color
+        fColor = texture(uTexMap, vTexCoord);
+
+        // Special behaviour for what is not background (light computation)
+        if (uBack){
+            // Ambiental contribution
+            vec3 H = normalize(L + E);
+            vec4 ambient = uAmbientProduct;
+
+            // Diffusive contribution
+            float Kd = max(dot(L, N), 0.0);
+            vec4  diffuse = Kd * uDiffuseProduct;
+
+            // Reflective contribution
+            float Ks = pow( max(dot(N, H), 0.0), uShininess);
+            vec4  specular = Ks * uSpecularProduct;
+            if(dot(L, N) < 0.0) specular = vec4(0.0, 0.0, 0.0, 1.0);
+            
+            // Color due to light added
+            fColor *= ambient + diffuse + specular;
+        }
+
+        fColor.a = 1.0;
+    }
+</script>
+
+<script type="text/javascript" src="./Common/InitShaders.js"></script>
+<script type="text/javascript" src="./Common/MVnew.js"></script>
+<script type="text/javascript" src="pieces.js"></script>
+<script type="text/javascript" src="variables.js"></script>
+<script type="text/javascript" src="nodes.js"></script>
+<script type="text/javascript" src="fingerscontrol.js"></script>
+<script type="text/javascript" src="events.js"></script>
+<script type="text/javascript" src="robohand.js"></script>
+<script type="text/javascript" src="animations.js"></script>
+<script type="text/javascript" src="sounds.js"></script>
+
+<body>
+
+    <img id="aluminium"         src="Resources/aluminium.jpg" hidden></img>
+    <img id="background"        src="Resources/background.jpg" hidden></img>
+    <img id="base"              src="Resources/base.jpg" hidden></img>
+    <img id="blue_plastic"      src="Resources/blue_plastic.jpg" hidden></img>
+    <img id="carbon_fiber"      src="Resources/carbon_fiber.jpg" hidden></img>
+    <img id="carbon_fiber_palm" src="Resources/carbon_fiber_palm.jpg" hidden></img>
+    <img id="ergal"             src="Resources/ergal.jpg" hidden></img>
+    <img id="gold"              src="Resources/gold.jpg" hidden></img>
+    <img id="grey_plastic"      src="Resources/grey_plastic.jpg" hidden></img>
+    <img id="steel"             src="Resources/steel.jpg" hidden></img>
+    <img id="white_plastic"     src="Resources/white_plastic.jpg" hidden></img>
+    
+    <source id="shorter_drill"    src="Resources/drill04.mp3" type="audio/mp3">
+    <source id="short_drill"      src="Resources/drill03.mp3" type="audio/mp3">
+    <source id="med_drill"        src="Resources/drill01.mp3" type="audio/mp3">
+    <source id="long_drill"       src="Resources/drill02.mp3" type="audio/mp3">
+    <source id="scale01"          src="Resources/scale01.mp3" type="audio/mp3">
+    <source id="scale02"          src="Resources/scale02.mp3" type="audio/mp3">
+    <source id="background_music" src="Resources/music.mp3"   type="audio/mp3">
+
+    <div class=left-menu>
+        <h1>Interactive Graphics Final Project</h1>
+        <h2>D'Auria Lorenzo (1918917)</h2>
+        <h2>Gallotta Roberto (1890251)</h2>
+        <div class="options">
+            <p class="ptext">
+                With this tool you can configure your personal robot end effector.
+            </p>
+            <p class="ptext">
+                Use the mouse and the scroll wheel to move inside the scene.
+                Use the arrow keys to change the camera framing.
+                With the customization menu you can configure all the options of the robot of your dreams,
+                 starting from the number of fingers up to the appearance of each component.
+                You can preview how the robot will behave with some sample animations.
+            </p>
+            <p class="ptext">
+                Remember to toggle the audio with the button below for a better user experience!
+            </p>
+            <h2>Have fun!</h2>
+            <p class="pbutton" style="margin-top: 40px;"><button id="Button1">Reset view</button></p>
+            <p class="pbutton"><button id="toggleAudio">Audio OFF</button></p>
+        </div>
+    </div>
+
+    <div class=right-menu>
+        <h1>Customization menu</h1>
+        <div class="options">
+            <h2 class="h2-option">Structural properties:</h2>
+            <p>Number of fingers: <span id="n_fingers">2</span> </p>
+            <input type="range" min="2" max="5" value="2" step="1" class="slider" id="fingers">
+            <p>Number of phalanges: <span id="n_phal">1</span> </p>
+            <input type="range" min="0" max="2" value="1" step="1" class="slider" id="phalanx">
+            <p>Scale phalanx length: <span id="phalanx_scale_factor">100</span>%</p>
+            <input type="range" min="0.25" max="2.0" value="1" step="0.25" class="slider" id="phalanx_scale">
+            <p>Scale tip length: <span id="top_phalanx_scale_factor">100</span>%</p>
+            <input type="range" min="1.0" max="20.0" value="1" step="0.5" class="slider" id="top_phalanx_scale">
+            <p class="pbutton"><button id="Button2">Humanoid hand</button></p>
+            <h2 class="h2-option">Appearance properties:</h2>
+            <table>
+                <tr>
+                    <td style="text-align: left;">Palm material:</td>
+                    <td style="text-align: right;"><select id="palm_app">
+                            <option value="1">Carbon fiber</option>
+                            <option value="2">Steel</option>
+                            <option value="3">Blue plastic</option>
+                        </select>
+                </tr>
+                </tr>
+                <tr>
+                    <td style="text-align: left;">Pivot material:</td>
+                    <td style="text-align: right;"><select id="perno_app">
+                            <option value="1">Ergal</option>
+                            <option value="2">Aluminium</option>
+                            <option value="3">Plastic</option>
+                        </select></td>
+                </tr>
+                <tr>
+                    <td style="text-align: lefy;">Finger material:</td>
+                    <td style="text-align: right;"><select id="finger_app">
+                            <option value="1">Plastic</option>
+                            <option value="2">Carbon fiber</option>
+                            <option value="3">Gold</option>
+                        </select></td>
+                </tr>
+            </table>
+            <p style="text-align: left;">
+            <button id="Button6" style="width: 150px; margin-right: 5px;">Fancy preset</button>
+            <button id="Button7" style="width: 150px;">Cheap preset</button></p>
+            <h2 class="h2-option">Animations:</h2>
+            <button id="Button3">Fingers hola</button>
+            <button id="Button4">OK gesture</button>
+            <button id="Button5">Grasp test</button>
+        </div>
+    </div>
+    
+    <div id="mywindow">
+    
+        <canvas id="gl-canvas">
+            Oops ... your browser doesn't support the HTML5 canvas element
+        </canvas>
+    
+    </div>
+
+</body>
+
+</html>
