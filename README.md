@@ -10,6 +10,8 @@ The user can change the number of fingers and phalanxes, alter the length of fin
 
 The user experience is enhanced with sounds and animations.
 
+Complete documentation can be found [here](./Documentation.pdf).
+
 ## Authors:
 
 - [Lorenzo D'Auria](https://www.linkedin.com/in/lorenzodauria/)
