@@ -1,6 +1,6 @@
-# Interactive graphics course - Final project
+# Interactive Graphics course - Final project
 
-### [Demo web page](https://sapienzainteractivegraphicscourse.github.io/final-project-robohand/robohand.html)
+### [Demo web page](https://lodauria.github.io/IG_Project_Robohand/robohand.html)
 
 ## Robohand:
 
